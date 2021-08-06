@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/go-redis/redis/v7"
+	"github.com/redklouds/go-notification-service-mq/models"
 )
 
 var (
@@ -17,23 +18,7 @@ var (
 	DEAD_LETTER_CHAN  = "DeadLetterQueue"
 )
 
-type PushNotificationModel struct {
-	To           string           `json:"to"`
-	Notification NotificationData `json:"notification"`
-}
-
-type NotificationData struct {
-	Body  string `json:"body"`
-	Title string `json:"title"`
-}
-
-type Message struct {
-	RetryCount int
-	ErrorMsg   string
-	Data       PushNotificationModel
-}
-
-func pushMessage(notificationPayload *PushNotificationModel) (bool, string) {
+func pushMessage(notificationPayload *models.PushNotificationModel) (bool, string) {
 	//check if the message has reached its re try threshold and place in dead letter queue if so
 
 	//else use BLPLUSH or ROPLPUBSH to Dequeue from the ActiveJobQueue
@@ -54,14 +39,6 @@ func pushMessage(notificationPayload *PushNotificationModel) (bool, string) {
 
 }
 func main() {
-	data := PushNotificationModel{
-		To: "dkfjdlskfjlk234",
-		Notification: NotificationData{
-			Body:  "HEYS",
-			Title: "FUCKOFF",
-		},
-	}
-	pushMessage(&data)
 	redisUri := os.Getenv("redisUri")
 	opt, _ := redis.ParseURL(redisUri)
 	c := redis.NewClient(opt) /*&redis.Options{
@@ -94,7 +71,7 @@ func main() {
 
 				fmt.Printf("GoRoutine-%d prcoessing %v\n", id, work)
 				//deserialize the object
-				var msg Message
+				var msg models.Message
 
 				err := json.Unmarshal([]byte(work), &msg)
 				if err != nil {
@@ -197,7 +174,7 @@ func main() {
 	//i want a thread pool going multiple go routines listing and readying my nigga
 }
 
-func PushIntoDeadLetterQueue(r *redis.Client, msg Message) {
+func PushIntoDeadLetterQueue(r *redis.Client, msg models.Message) {
 	jsonStr, _ := json.Marshal(msg)
 	r.RPush(DEAD_LETTER_CHAN, jsonStr)
 }
